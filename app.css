@@ -1,0 +1,48 @@
+/* Minimal app-specific styling; rely on Bootstrap as primary UI system */
+
+:root {
+  --app-sidebar-width: 280px;
+}
+
+.app-body {
+  background: #f8f9fa;
+}
+
+.app-shell .navbar-brand {
+  font-weight: 600;
+}
+
+.app-shell .page-title {
+  font-weight: 600;
+}
+
+.table-responsive {
+  max-height: 70vh;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bs-body-bg);
+}
+
+.kpi-card .kpi-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+}
+
+.skeleton-line {
+  height: 1rem;
+  border-radius: .375rem;
+}
+
+.sidebar-nav .nav-link.active {
+  background: rgba(13, 110, 253, 0.12);
+  font-weight: 600;
+}
+
+.code-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: .85em;
+}
