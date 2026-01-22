@@ -16,7 +16,8 @@ export function setSession({ gasUrl, sessionToken, role, profile }) {
 }
 
 export function clearSession() {
-  localStorage.removeItem(STORAGE_KEYS.GAS_URL);
+  // Preserve GAS_URL to avoid forcing users to re-enter the Web App URL on every login.
+  // If you want to reset server URL, clear localStorage manually or change it on the login screen.
   localStorage.removeItem(STORAGE_KEYS.SESSION_TOKEN);
   localStorage.removeItem(STORAGE_KEYS.ROLE);
   localStorage.removeItem(STORAGE_KEYS.PROFILE);
@@ -64,8 +65,8 @@ export function enforceRouteRBAC(route) {
 
   const allow = {
     REQUESTER: new Set(["dashboard", "stock", "requisitions"]),
-    STORE: new Set(["dashboard", "stock", "transactions", "requisitions"]),
-    ADMIN: new Set(["dashboard", "stock", "transactions", "requisitions", "admin"]),
+    STORE: new Set(["dashboard", "stock", "receive", "issue", "transactions", "requisitions"]),
+    ADMIN: new Set(["dashboard", "stock", "receive", "issue", "transactions", "requisitions", "admin"]),
   };
 
   // default deny if unknown role

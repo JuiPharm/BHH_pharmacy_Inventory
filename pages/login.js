@@ -1,10 +1,23 @@
 // pages/login.js
-import { callApi, formatError } from "../api.js";
+import { callApi, formatError, DEFAULT_GAS_URL, LOCK_GAS_URL } from "../api.js";
 import { login } from "../auth.js";
 import { renderSkeleton, showToast, escapeHtml } from "../ui.js";
 
 export function render(container) {
   container.className = ""; // in login, container is #app (no shell)
+
+  // Determine effective GAS URL
+  const savedUrl = (localStorage.getItem("GAS_URL") || "").trim();
+  const defaultUrl = (DEFAULT_GAS_URL || "").trim();
+  const initialUrl = savedUrl || defaultUrl || "";
+  let currentUrl = initialUrl;
+  // If user hasn't saved yet but DEFAULT_GAS_URL is set, persist it to satisfy the constraint "store GAS_URL in localStorage".
+  if (!savedUrl && defaultUrl) localStorage.setItem("GAS_URL", defaultUrl);
+
+  // If URL is locked and we already have one, hide editable input entirely.
+  // If URL is missing, allow input even if locked (otherwise user cannot proceed).
+  const canEditUrl = !LOCK_GAS_URL || !initialUrl;
+
   container.innerHTML = `
     <div class="container py-4 py-lg-5">
       <div class="row justify-content-center">
@@ -19,9 +32,45 @@ export function render(container) {
               <div id="alertHost"></div>
 
               <div class="mb-3">
-                <label class="form-label">GAS_URL</label>
-                <input type="url" class="form-control" id="gasUrl" placeholder="https://script.google.com/macros/s/....../exec" required>
-                <div class="form-text">URL ของ Google Apps Script Web App (Deploy เป็น Web app)</div>
+                <div class="d-flex align-items-center justify-content-between">
+                  <div class="small text-muted">Server</div>
+                  ${canEditUrl ? `
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#advServer" aria-expanded="false" aria-controls="advServer">
+                      <i class="bi bi-gear me-1"></i>เปลี่ยนเซิร์ฟเวอร์ (Advanced)
+                    </button>
+                  ` : `
+                    <span class="badge text-bg-light">Locked</span>
+                  `}
+                </div>
+
+                <div class="mt-1">
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-hdd-network text-muted"></i>
+                    <div class="small">
+                      <span class="text-muted" id="serverUrlLabel">${escapeHtml(currentUrl ? currentUrl : "ยังไม่ได้ตั้งค่า")}</span>
+                    </div>
+                    ${currentUrl ? `
+                      <button class="btn btn-sm btn-link p-0" type="button" id="btnCopyUrl" title="Copy URL">
+                        <i class="bi bi-clipboard"></i>
+                      </button>
+                    ` : ""}
+                  </div>
+                </div>
+
+                ${canEditUrl ? `
+                  <div class="collapse mt-2" id="advServer">
+                    <div class="border rounded p-3 bg-body-tertiary">
+                      <label class="form-label">GAS_URL</label>
+                      <input type="url" class="form-control" id="gasUrl" placeholder="https://script.google.com/macros/s/....../exec" ${initialUrl ? "" : "required"}>
+                      <div class="form-text">ระบุ URL ของ Google Apps Script Web App (Deploy เป็น Web app)</div>
+                      <div class="d-flex justify-content-end mt-2">
+                        <button class="btn btn-sm btn-outline-primary" type="button" id="btnSaveUrl">
+                          <i class="bi bi-save me-1"></i>บันทึก
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ` : ""}
               </div>
 
               <div class="mb-3">
@@ -63,9 +112,26 @@ export function render(container) {
   const alertHost = container.querySelector("#alertHost");
   const btnTest = container.querySelector("#btnTest");
   const btnLogin = container.querySelector("#btnLogin");
+  const btnCopyUrl = container.querySelector("#btnCopyUrl");
+  const btnSaveUrl = container.querySelector("#btnSaveUrl");
+  const serverUrlLabel = container.querySelector("#serverUrlLabel");
 
-  // Prefill GAS_URL if exists
-  gasUrlEl.value = localStorage.getItem("GAS_URL") || "";
+  // Prefill advanced input (if present)
+  if (gasUrlEl) gasUrlEl.value = initialUrl;
+
+  const getGasUrl = () => {
+    if (gasUrlEl) return gasUrlEl.value.trim();
+    return (localStorage.getItem("GAS_URL") || DEFAULT_GAS_URL || "").trim();
+  };
+
+  const persistGasUrl = (url) => {
+    const u = String(url || "").trim();
+    if (u) {
+      localStorage.setItem("GAS_URL", u);
+      currentUrl = u;
+      if (serverUrlLabel) serverUrlLabel.textContent = u;
+    }
+  };
 
   const setAlert = (type, msg) => {
     alertHost.innerHTML = `
@@ -78,11 +144,12 @@ export function render(container) {
 
   btnTest.addEventListener("click", async () => {
     alertHost.innerHTML = "";
-    const gasUrl = gasUrlEl.value.trim();
+    const gasUrl = getGasUrl();
     if (!gasUrl) {
-      setAlert("warning", "กรุณากรอก GAS_URL");
+      setAlert("warning", "กรุณาตั้งค่า GAS_URL (กดปุ่ม Advanced เพื่อกรอก URL)");
       return;
     }
+    persistGasUrl(gasUrl);
     btnTest.disabled = true;
     btnTest.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังทดสอบ...';
 
@@ -100,14 +167,16 @@ export function render(container) {
 
   btnLogin.addEventListener("click", async () => {
     alertHost.innerHTML = "";
-    const gasUrl = gasUrlEl.value.trim();
+    const gasUrl = getGasUrl();
     const username = usernameEl.value.trim();
     const password = passwordEl.value;
 
     if (!gasUrl || !username || !password) {
-      setAlert("warning", "กรุณากรอก GAS_URL, username และ password ให้ครบ");
+      setAlert("warning", gasUrl ? "กรุณากรอก username และ password ให้ครบ" : "กรุณาตั้งค่า GAS_URL (Advanced) และกรอก username/password");
       return;
     }
+
+    persistGasUrl(gasUrl);
 
     btnLogin.disabled = true;
     btnLogin.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังเข้าสู่ระบบ...';
@@ -124,6 +193,30 @@ export function render(container) {
       setAlert("danger", "เข้าสู่ระบบไม่สำเร็จ: " + (res?.message || res?.error || "กรุณาตรวจสอบข้อมูล"));
     }
   });
+
+  // Optional helpers
+  if (btnCopyUrl) {
+    btnCopyUrl.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(currentUrl || "");
+        showToast("คัดลอก GAS_URL แล้ว", "success");
+      } catch {
+        showToast("คัดลอกไม่สำเร็จ", "danger");
+      }
+    });
+  }
+
+  if (btnSaveUrl && gasUrlEl) {
+    btnSaveUrl.addEventListener("click", () => {
+      const u = gasUrlEl.value.trim();
+      if (!u) {
+        setAlert("warning", "กรุณากรอก GAS_URL ก่อนบันทึก");
+        return;
+      }
+      persistGasUrl(u);
+      showToast("บันทึก GAS_URL แล้ว", "success");
+    });
+  }
 
   return { cleanup() {} };
 }

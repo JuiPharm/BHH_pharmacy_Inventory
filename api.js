@@ -3,13 +3,26 @@
 
 import { forceLogout } from "./auth.js";
 
+// Optional: set a default Web App URL here so users don't need to type it on the login screen.
+// Example:
+// export const DEFAULT_GAS_URL = "https://script.google.com/macros/s/XXXX/exec";
+// Default GAS URL (recommend setting this in production to avoid asking users)
+// Example:
+// export const DEFAULT_GAS_URL = "https://script.google.com/macros/s/XXXX/exec";
+export const DEFAULT_GAS_URL = "";
+
+// If true and a GAS URL is available (DEFAULT_GAS_URL or saved GAS_URL), the login page will not show an
+// editable GAS_URL field. This prevents end users from accidentally pointing to the wrong backend.
+// To allow changing server from the login page, set this to false.
+export const LOCK_GAS_URL = true;
+
 const STORAGE_KEYS = {
   GAS_URL: "GAS_URL",
   SESSION_TOKEN: "sessionToken",
 };
 
 export function getConfig() {
-  const gasUrl = localStorage.getItem(STORAGE_KEYS.GAS_URL) || "";
+  const gasUrl = localStorage.getItem(STORAGE_KEYS.GAS_URL) || DEFAULT_GAS_URL || "";
   const sessionToken = localStorage.getItem(STORAGE_KEYS.SESSION_TOKEN) || "";
   return { gasUrl, sessionToken };
 }

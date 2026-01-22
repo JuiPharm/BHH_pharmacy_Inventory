@@ -172,6 +172,8 @@ function renderItems(host, rows, onReload) {
 
       if (res?.ok) {
         showToast("บันทึก Item สำเร็จ", "success");
+        clearLocalCache("admin_all_masters");
+        clearLocalCache("masters_items");
         closeModal(id);
         document.getElementById(id)?.remove();
         await onReload();
@@ -281,6 +283,7 @@ function renderVendors(host, rows, onReload) {
 
       if (res?.ok) {
         showToast("บันทึก Vendor สำเร็จ", "success");
+        clearLocalCache("admin_all_masters");
         closeModal(id);
         document.getElementById(id)?.remove();
         await onReload();
@@ -383,6 +386,8 @@ function renderWarehouses(host, rows, onReload) {
 
       if (res?.ok) {
         showToast("บันทึก Warehouse สำเร็จ", "success");
+        clearLocalCache("admin_all_masters");
+        clearLocalCache("masters_warehouses");
         closeModal(id);
         document.getElementById(id)?.remove();
         await onReload();

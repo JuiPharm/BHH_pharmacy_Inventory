@@ -139,7 +139,11 @@ function menuByRole(role) {
   ];
 
   if (r === "STORE" || r === "ADMIN") {
-    base.splice(2, 0, { key: "transactions", label: "Transactions", hash: "#/transactions", icon: "bi-arrow-left-right" });
+    // Separate Receive and Issue for better usability.
+    base.splice(2, 0,
+      { key: "receive", label: "Receive", hash: "#/receive", icon: "bi-box-arrow-in-down" },
+      { key: "issue", label: "Issue", hash: "#/issue", icon: "bi-box-arrow-up" }
+    );
   }
   if (r === "ADMIN") {
     base.push({ key: "admin", label: "Admin Masters", hash: "#/admin", icon: "bi-shield-lock" });
@@ -241,6 +245,38 @@ export function setActiveNav(activeKey) {
     if (el.getAttribute("data-navkey") === activeKey) el.classList.add("active");
     else el.classList.remove("active");
   });
+}
+
+
+const LOCAL_CACHE_PREFIX = "INV_CACHE:";
+
+export function setLocalCache(key, value, ttlMs) {
+  const payload = { v: value, exp: Date.now() + (ttlMs || 0) };
+  try {
+    localStorage.setItem(LOCAL_CACHE_PREFIX + key, JSON.stringify(payload));
+  } catch {
+    // ignore quota errors
+  }
+}
+
+export function getLocalCache(key) {
+  const raw = localStorage.getItem(LOCAL_CACHE_PREFIX + key);
+  if (!raw) return null;
+  try {
+    const payload = JSON.parse(raw);
+    if (payload?.exp && Date.now() > payload.exp) {
+      localStorage.removeItem(LOCAL_CACHE_PREFIX + key);
+      return null;
+    }
+    return payload?.v ?? null;
+  } catch {
+    localStorage.removeItem(LOCAL_CACHE_PREFIX + key);
+    return null;
+  }
+}
+
+export function clearLocalCache(key) {
+  localStorage.removeItem(LOCAL_CACHE_PREFIX + key);
 }
 
 export function dispatchAppEvent(name, detail = {}) {

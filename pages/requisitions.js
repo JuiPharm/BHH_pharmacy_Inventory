@@ -1,6 +1,6 @@
 // pages/requisitions.js
 import { callApi, formatError } from "../api.js";
-import { renderSkeleton, renderErrorBanner, showToast, escapeHtml, confirmModal, fmtDateTime } from "../ui.js";
+import { renderSkeleton, renderErrorBanner, showToast, escapeHtml, confirmModal, fmtDateTime, getLocalCache, setLocalCache } from "../ui.js";
 import { getRole } from "../auth.js";
 
 let items = [];
@@ -10,9 +10,16 @@ function canCreate() {
   return role === "REQUESTER" || role === "ADMIN";
 }
 
+
 async function loadItems() {
+  const cached = getLocalCache("masters_items");
+  if (Array.isArray(cached) && cached.length) {
+    items = cached;
+    return;
+  }
   const res = await callApi("list_items", {});
   if (res?.ok) items = res.data?.items || res.items || res.data || [];
+  setLocalCache("masters_items", items, 5 * 60 * 1000);
 }
 
 function itemDatalist() {
