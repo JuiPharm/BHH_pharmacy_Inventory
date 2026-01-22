@@ -9,7 +9,7 @@ import { forceLogout } from "./auth.js";
 // Default GAS URL (recommend setting this in production to avoid asking users)
 // Example:
 // export const DEFAULT_GAS_URL = "https://script.google.com/macros/s/XXXX/exec";
-export const DEFAULT_GAS_URL = "";
+export const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbwz6YOLJmxuy8-8Pqg6B35wQfiyKPNiCqvpdbekCZVg_xkJXEIQScsX_-O8jBg43h2h/exec";
 
 // If true and a GAS URL is available (DEFAULT_GAS_URL or saved GAS_URL), the login page will not show an
 // editable GAS_URL field. This prevents end users from accidentally pointing to the wrong backend.
