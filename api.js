@@ -19,7 +19,7 @@ export const DEFAULT_GAS_URL = "";
 export const LOCK_GAS_URL = true;
 
 const STORAGE_KEYS = {
-  GAS_URL: "GAS_URL",
+  GAS_URL: "https://script.google.com/macros/s/AKfycbwz6YOLJmxuy8-8Pqg6B35wQfiyKPNiCqvpdbekCZVg_xkJXEIQScsX_-O8jBg43h2h/exec",
   SESSION_TOKEN: "sessionToken",
 };
 
