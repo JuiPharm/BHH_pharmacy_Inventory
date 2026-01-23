@@ -1,5 +1,7 @@
-// api.js - reusable API client for Google Apps Script Web App (JSON API)
-// Constraint: must POST with Content-Type text/plain;charset=utf-8
+// api.js - reusable API client for Google Apps Script Web App (Single API Gateway)
+// Supports:
+//  - GET  GAS_URL?action=...&sessionToken=...&data={...}  (read actions)
+//  - POST GAS_URL  body {action,data,sessionToken} (write actions)
 
 import { forceLogout } from "./auth.js";
 
@@ -9,7 +11,7 @@ import { forceLogout } from "./auth.js";
 // Default GAS URL (recommend setting this in production to avoid asking users)
 // Example:
 // export const DEFAULT_GAS_URL = "https://script.google.com/macros/s/XXXX/exec";
-export const DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbwz6YOLJmxuy8-8Pqg6B35wQfiyKPNiCqvpdbekCZVg_xkJXEIQScsX_-O8jBg43h2h/exec";
+export const DEFAULT_GAS_URL = "";
 
 // If true and a GAS URL is available (DEFAULT_GAS_URL or saved GAS_URL), the login page will not show an
 // editable GAS_URL field. This prevents end users from accidentally pointing to the wrong backend.
@@ -85,19 +87,42 @@ export async function callApi(action, data = {}, opts = {}) {
 
   const payload = { action, data, sessionToken };
 
+  // Read actions can go via GET (easier to debug; avoids some POST overhead).
+  // Writes always use POST (server validates; FE must not be trusted).
+  const READ_ACTIONS = new Set([
+    "health",
+    "dashboard_snapshot",
+    "get_stock_summary",
+    "get_stock_summary_all",
+    "list_items",
+    "list_vendors",
+    "list_warehouses",
+    "list_requisitions",
+    "get_requisition_detail",
+  ]);
+
+  const forcePost = Boolean(opts.forcePost);
+  const method = forcePost ? "POST" : (READ_ACTIONS.has(action) ? "GET" : "POST");
+
   let resp;
   let text;
   try {
-    resp = await fetch(gasUrl, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload),
-      cache: "no-store",
-      mode: "cors",
-    });
-    text = await resp.text();
+    if (method === "GET") {
+      const url = buildGatewayUrl_(gasUrl, action, sessionToken, data);
+      resp = await fetch(url, { method: "GET", cache: "no-store", mode: "cors" });
+      text = await resp.text();
+    } else {
+      resp = await fetch(gasUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload),
+        cache: "no-store",
+        mode: "cors",
+      });
+      text = await resp.text();
+    }
   } catch (networkErr) {
-    return { ok: false, errorCode: "NETWORK_ERROR", message: "เชื่อมต่อไม่ได้ โปรดตรวจสอบเครือข่าย/URL", details: String(networkErr) };
+    return { ok: false, success: false, errorCode: "NETWORK_ERROR", message: "เชื่อมต่อไม่ได้ โปรดตรวจสอบเครือข่าย/URL", error: String(networkErr) };
   }
 
   const parsed = safeJsonParse(text);
@@ -113,8 +138,13 @@ export async function callApi(action, data = {}, opts = {}) {
 
   const result = parsed.value;
 
-  // Some backends return ok boolean; some use success
+  // Standard contract uses success; legacy uses ok. Normalize both.
   const ok = result?.ok ?? result?.success ?? false;
+  if (typeof result === "object" && result) {
+    if (typeof result.ok === "undefined") result.ok = Boolean(ok);
+    if (typeof result.success === "undefined") result.success = Boolean(ok);
+    if (!result.updatedAt && result.updated_at) result.updatedAt = result.updated_at;
+  }
 
   if (!ok && isSessionInvalid(result)) {
     // Force logout and redirect to login to prevent loops
@@ -126,4 +156,15 @@ export async function callApi(action, data = {}, opts = {}) {
   if (typeof result === "object" && result) result.httpStatus = resp?.status;
 
   return result;
+}
+
+function buildGatewayUrl_(baseUrl, action, sessionToken, data) {
+  const u = new URL(baseUrl);
+  u.searchParams.set("action", action);
+  if (sessionToken) u.searchParams.set("sessionToken", sessionToken);
+  if (data && Object.keys(data).length) {
+    // Keep nested data safe by sending a JSON string.
+    u.searchParams.set("data", JSON.stringify(data));
+  }
+  return u.toString();
 }

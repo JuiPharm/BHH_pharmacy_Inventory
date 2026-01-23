@@ -9,6 +9,7 @@ import {
   dispatchAppEvent,
   getLocalCache,
   setLocalCache,
+  clearLocalCache,
 } from "../ui.js";
 
 let items = [];
@@ -57,7 +58,12 @@ export async function loadTxMasters() {
 
 export async function refreshStockSummaryQuick() {
   // Requirement: refresh stock summary immediately after submit success
-  // Note: for paged stock, backend stores lastUpdated; calling this is still useful as a server-side cache warm-up.
+  // Clear FE caches so Stock page will fetch fresh state deterministically.
+  clearLocalCache("stock_all_v1");
+  clearLocalCache("stock_all_warehouses_v1");
+  clearLocalCache("stock_all_meta_v1");
+
+  // Warm-up server cache lightly (fast).
   await callApi("get_stock_summary", { limit: 1, cursor: 0 });
   dispatchAppEvent("stock-updated", { at: Date.now() });
 }
